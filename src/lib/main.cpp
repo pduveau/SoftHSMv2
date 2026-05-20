@@ -263,7 +263,9 @@ PKCS_API CK_RV C_Finalize(CK_VOID_PTR pReserved)
 {
 	try
 	{
-		return SoftHSM::i()->C_Finalize(pReserved);
+		CK_RV res = SoftHSM::i()->C_Finalize(pReserved);
+		Logger::i()->closeFile();
+		return res;
 	}
 	catch (...)
 	{

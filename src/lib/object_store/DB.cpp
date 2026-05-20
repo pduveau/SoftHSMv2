@@ -46,7 +46,7 @@
 #include <unistd.h>
 #include <errno.h>
 #else
-#define gmtime_r(tt, pm) (pm=gmtime(tt))
+#define gmtime_r(tt, pm) (gmtime_s(pm,tt))
 #include <io.h>
 #define S_IRUSR 0400
 #define S_IWUSR 0200

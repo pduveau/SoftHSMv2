@@ -524,7 +524,7 @@ int main(int argc, char* argv[])
 		exit(0);
 	}
 
-	stream = fopen(argv[1], "r");
+	stream = fopen(argv[1], "rb");
 	if (stream == NULL)
 	{
 		fprintf(stderr, "can't open object file %s\n", argv[1]);

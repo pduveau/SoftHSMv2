@@ -55,15 +55,15 @@ syslog(int priority, const char *message, ...) {
 		case LOG_NOTICE:
 		case LOG_DEBUG:
 			ReportEventA(hEventLog, EVENTLOG_INFORMATION_TYPE, 0,
-				     0x40000003, NULL, 1, 0, str, NULL);
+				     0x40000403, NULL, 1, 0, str, NULL);
 			break;
 		case LOG_WARNING:
 			ReportEventA(hEventLog, EVENTLOG_WARNING_TYPE, 0,
-				     0x80000002, NULL, 1, 0, str, NULL);
+				     0x80000403, NULL, 1, 0, str, NULL);
 			break;
 		default:
 			ReportEventA(hEventLog, EVENTLOG_ERROR_TYPE, 0,
-				     0xc0000001, NULL, 1, 0, str, NULL);
+				     0xc0000403, NULL, 1, 0, str, NULL);
 			break;
 		}
 	}

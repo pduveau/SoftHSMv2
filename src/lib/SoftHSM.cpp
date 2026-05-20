@@ -105,6 +105,7 @@
 
 #ifdef HAVE_CXX11
 
+std::unique_ptr<Logger> Logger::instance(nullptr);
 std::unique_ptr<MutexFactory> MutexFactory::instance(nullptr);
 std::unique_ptr<SecureMemoryRegistry> SecureMemoryRegistry::instance(nullptr);
 #if defined(WITH_OPENSSL)
@@ -116,6 +117,7 @@ std::unique_ptr<SoftHSM> SoftHSM::instance(nullptr);
 
 #else
 
+std::auto_ptr<Logger> Logger::instance(nullptr);
 std::auto_ptr<MutexFactory> MutexFactory::instance(NULL);
 std::auto_ptr<SecureMemoryRegistry> SecureMemoryRegistry::instance(NULL);
 #if defined(WITH_OPENSSL)
@@ -597,15 +599,17 @@ CK_RV SoftHSM::C_Initialize(CK_VOID_PTR pInitArgs)
 		return CKR_GENERAL_ERROR;
 	}
 
+	Logger* logger = Logger::i();
+
 	// Configure the log level
-	if (!setLogLevel(Configuration::i()->getString("log.level", DEFAULT_LOG_LEVEL)))
+	if (!logger->setLogLevel(Configuration::i()->getString("log.level", DEFAULT_LOG_LEVEL)))
 	{
 		ERROR_MSG("Could not set the log level");
 		return CKR_GENERAL_ERROR;
 	}
 
 	// Configure log file (empty string = use syslog)
-	if (!setLogFile(Configuration::i()->getString("log.file", "")))
+	if (!logger->setLogFile(Configuration::i()->getString("log.file", "")))
 	{
 		WARNING_MSG("Could not open log file, using syslog");
 	}
@@ -614,7 +618,6 @@ CK_RV SoftHSM::C_Initialize(CK_VOID_PTR pInitArgs)
 	if (!ObjectStoreToken::selectBackend(Configuration::i()->getString("objectstore.backend", DEFAULT_OBJECTSTORE_BACKEND)))
 	{
 		ERROR_MSG("Could not set the storage backend");
-		closeLogFile();
 		return CKR_GENERAL_ERROR;
 	}
 
@@ -626,7 +629,6 @@ CK_RV SoftHSM::C_Initialize(CK_VOID_PTR pInitArgs)
 	if (!objectStore->isValid())
 	{
 		WARNING_MSG("Could not load the object store");
-		closeLogFile();
 		delete objectStore;
 		objectStore = NULL;
 		delete sessionObjectStore;
@@ -674,9 +676,6 @@ CK_RV SoftHSM::C_Finalize(CK_VOID_PTR pReserved)
 	sessionObjectStore = NULL;
 	CryptoFactory::reset();
 	SecureMemoryRegistry::reset();
-
-	// Close log file if open
-	closeLogFile();
 
 	isInitialised = false;
 

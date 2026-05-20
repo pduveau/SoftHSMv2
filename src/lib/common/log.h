@@ -39,6 +39,8 @@
 
 #include <syslog.h>
 #include <string>
+#include <memory>
+#include "MutexFactory.h"
 
 /* Unset this define if you don't want to log the source file name and line number */
 #define SOFTHSM_LOG_FILE_AND_LINE
@@ -80,10 +82,44 @@ constexpr int MAX_LOG_MESSAGE_SIZE = 4096;
 #endif
 
 /* Function definitions */
-bool setLogLevel(const std::string &loglevel);
-bool setLogFile(const std::string &logFilePath);
-void closeLogFile();
 void softHSMLog(const int loglevel, const char* functionName, const char* fileName, const int lineNo, const char* format, ...);
+
+class Logger
+{
+public:
+	~Logger();
+
+	static Logger* i();
+
+	bool setLogLevel(const std::string& loglevel);
+	bool setLogFile(const std::string& logFilePath);
+
+	void log(const int loglevel, std::string prependStr, const char* msgText);
+
+	void closeFile();
+
+	int softLogLevel = LOG_DEBUG;
+
+private:
+
+	FILE* logFile = nullptr;
+	Mutex* logMutex = nullptr;
+	bool debug = false;
+
+	void writeLogToFile(const int loglevel, const char* prependText, const char* msgText);
+
+	const char* getLevelString(int loglevel);
+
+	// The one-and-only instance
+#ifdef HAVE_CXX11
+	static std::unique_ptr<Logger> instance;
+#else
+	static std::auto_ptr<MutexFactory> instance;
+#endif
+
+
+};
+
 
 #endif /* !_SOFTHSM_V2_LOG_H */
 

@@ -38,7 +38,7 @@
 #include <stdio.h>
 #include <sstream>
 #include <vector>
-#include <time.h>
+#include <memory>
 #ifdef _WIN32
 #include <windows.h>
 #include <process.h>
@@ -48,11 +48,7 @@
 #include "log.h"
 #include "MutexFactory.h"
 
-int softLogLevel = LOG_DEBUG;
-static FILE* logFile = nullptr;
-static Mutex* logMutex = nullptr;
-
-bool setLogLevel(const std::string &loglevel)
+bool Logger::setLogLevel(const std::string &loglevel)
 {
 	if (loglevel == "ERROR")
 	{
@@ -79,7 +75,7 @@ bool setLogLevel(const std::string &loglevel)
 	return true;
 }
 
-bool setLogFile(const std::string &logFilePath)
+bool Logger::setLogFile(const std::string& logFilePath)
 {
 	// Quick return without creating mutex for default configuration
 	if (logFilePath.empty() && logFile == nullptr)
@@ -115,7 +111,15 @@ bool setLogFile(const std::string &logFilePath)
 	return true;
 }
 
-void closeLogFile()
+void Logger::closeFile(){
+	if (logFile != nullptr)
+	{
+		fclose(logFile);
+		logFile = nullptr;
+	}
+}
+
+Logger::~Logger()
 {
 	if (logFile != nullptr)
 	{
@@ -130,9 +134,9 @@ void closeLogFile()
 	}
 }
 
-static const char* getLevelString(int loglevel)
+const char* Logger::getLevelString(int loglevel)
 {
-	switch(loglevel)
+	switch (loglevel)
 	{
 		case LOG_ERR: return "ERROR";
 		case LOG_WARNING: return "WARNING";
@@ -142,7 +146,7 @@ static const char* getLevelString(int loglevel)
 	}
 }
 
-static void writeLogToFile(const int loglevel, const char* prependText, const char* msgText)
+void Logger::writeLogToFile(const int loglevel, const char* prependText, const char* msgText)
 {
 	MutexLocker lock(logMutex);
 
@@ -170,16 +174,28 @@ static void writeLogToFile(const int loglevel, const char* prependText, const ch
 #endif
 	strftime(basetime, sizeof(basetime), "%Y-%m-%d %H:%M:%S", &timeinfo);
 	fprintf(logFile, "%s.%03ld [%d] %s: %s%s\n",
-		basetime, millis,
-		(int)getpid(), getLevelString(loglevel), prependText, msgText);
+			basetime, millis,
+			(int)getpid(), getLevelString(loglevel), prependText, msgText);
 #endif
 
 	fflush(logFile);
 }
 
+Logger* Logger::i() {
+
+	if (!instance.get())
+	{
+		instance.reset(new Logger());
+	}
+
+	return instance.get();
+}
+
 void softHSMLog(const int loglevel, const char* functionName, const char* fileName, const int lineNo, const char* format, ...)
 {
-	if (loglevel > softLogLevel) return;
+	Logger* logger = Logger::i();
+
+	if (loglevel > logger->softLogLevel) return;
 
 	std::stringstream prepend;
 
@@ -208,20 +224,23 @@ void softHSMLog(const int loglevel, const char* functionName, const char* fileNa
 
 	const char* msgText = &logMessage[0];
 	std::string prependStr = prepend.str();
+
+	logger->log(loglevel,prependStr,msgText);
+}
+void Logger::log(const int loglevel, std::string prependStr, const char* msgText)
+{
 	const char* prependText = prependStr.c_str();
 
 	// Log to file if configured, otherwise use syslog
-	if (logFile != nullptr)
-	{
+	if (logFile != nullptr) {
 		writeLogToFile(loglevel, prependText, msgText);
-	}
-	else
-	{
+	} else {
 		syslog(loglevel, "%s%s", prependText, msgText);
 	}
+	
+	if (debug) {
+		fprintf(stderr, "%s%s\n", prependStr.c_str(), msgText);
+		fflush(stderr);
+	}
 
-#ifdef DEBUG_LOG_STDERR
-	fprintf(stderr, "%s%s\n", prependText, msgText);
-	fflush(stderr);
-#endif
 }

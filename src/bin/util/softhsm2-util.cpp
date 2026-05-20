@@ -74,6 +74,7 @@
 
 #ifdef HAVE_CXX11
 
+std::unique_ptr<Logger> Logger::instance(nullptr);
 std::unique_ptr<MutexFactory> MutexFactory::instance(nullptr);
 std::unique_ptr<SecureMemoryRegistry> SecureMemoryRegistry::instance(nullptr);
 #if defined(WITH_OPENSSL)
@@ -84,6 +85,7 @@ std::unique_ptr<BotanCryptoFactory> BotanCryptoFactory::instance(nullptr);
 
 #else
 
+std::auto_ptr<Logger> Logger::instance(nullptr);
 std::auto_ptr<MutexFactory> MutexFactory::instance(NULL);
 std::auto_ptr<SecureMemoryRegistry> SecureMemoryRegistry::instance(NULL);
 #if defined(WITH_OPENSSL)
@@ -676,11 +678,19 @@ bool initSoftHSM()
 		return false;
 	}
 
+	Logger* logger = Logger::i();
+
 	// Configure the log level
-	if (!setLogLevel(Configuration::i()->getString("log.level", DEFAULT_LOG_LEVEL)))
+	if (!logger->setLogLevel(Configuration::i()->getString("log.level", DEFAULT_LOG_LEVEL)))
 	{
 		fprintf(stderr, "ERROR: Could not configure the log level.\n");
 		return false;
+	}
+
+	// Configure object store storage backend used by all tokens.
+	if (!logger->setLogFile(Configuration::i()->getString("log.file", "")))
+	{
+		WARNING_MSG("Could not open log file, using syslog");
 	}
 
 	// Configure object store storage backend used by all tokens.
