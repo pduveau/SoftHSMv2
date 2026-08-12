@@ -279,7 +279,7 @@ class P11AttrDestroyable : public P11Attribute
 {
 public:
 	// Constructor
-	P11AttrDestroyable(OSObject* inobject) : P11Attribute(inobject) { type = CKA_DESTROYABLE; size = sizeof(CK_BBOOL); checks = ck17; }
+	P11AttrDestroyable(OSObject* inobject) : P11Attribute(inobject) { type = CKA_DESTROYABLE; size = sizeof(CK_BBOOL); checks = ck8; }
 
 protected:
 	// Set the default value of the attribute

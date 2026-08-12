@@ -476,6 +476,16 @@ CK_RV P11Attribute::update(Token* token, bool isPrivate, CK_VOID_PTR pValue, CK_
 		}
 	}
 
+	// ck11  Can only be changed to CK_FALSE on a C_SetAttributeValue call; actual
+	//       enforcement happens in the specific attribute implementation.
+	if ((checks & ck12) == ck12)
+	{
+		if (OBJECT_OP_SET == op || OBJECT_OP_COPY == op)
+		{
+			return updateAttr(token, isPrivate, pValue, ulValueLen, op);
+		}
+	}
+
 	// ck17  Can be changed in the process of copying the object using C_CopyObject.
 	if ((checks & ck17) == ck17)
 	{
